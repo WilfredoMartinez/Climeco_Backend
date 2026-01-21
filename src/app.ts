@@ -1,0 +1,73 @@
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import morgan from 'morgan';
+
+import { errorHandler } from '@/middlewares/errorHandler';
+import { notFoundHandler } from '@/middlewares/notFound';
+import healthRouter from '@/routes/health';
+import accountPayablePaymentRouter from '@/routes/v1/accountPayablePayment.route';
+import accountsPayableRouter from '@/routes/v1/accountsPayable.route';
+import allergiesRouter from '@/routes/v1/allergy.route';
+import appointmentsRouter from '@/routes/v1/appointment.route';
+import authRouter from '@/routes/v1/auth.route';
+import backupRouter from '@/routes/v1/backup.route';
+import dashboardRouter from '@/routes/v1/dashboard.route';
+import dentalHistoriesRouter from '@/routes/v1/dentalHistory.route';
+import examsRouter from '@/routes/v1/exam.route';
+import examCategoriesRouter from '@/routes/v1/examCategory.route';
+import examTypesRouter from '@/routes/v1/examType.route';
+import medicationsRouter from '@/routes/v1/medication.route';
+import medicationCategoriesRouter from '@/routes/v1/medicationCategory.route';
+import odontogramsRouter from '@/routes/v1/odontogram.route';
+import patientsRouter from '@/routes/v1/patient.route';
+import patientHistoryRouter from '@/routes/v1/patientHistory.route';
+import patientSurveysRouter from '@/routes/v1/patientSurvey.route';
+import permissionsRouter from '@/routes/v1/permission.route';
+import prescriptionsRouter from '@/routes/v1/prescription.route';
+import reportsRouter from '@/routes/v1/report.route';
+import rolesRouter from '@/routes/v1/role.route';
+import specialtiesRouter from '@/routes/v1/specialty.route';
+import surveysRouter from '@/routes/v1/survey.route';
+import usersRouter from '@/routes/v1/user.route';
+
+const app = express();
+
+app.use(helmet());
+app.use(helmet.hidePoweredBy());
+app.use(helmet.noSniff());
+app.use(helmet.xssFilter());
+app.use(cors());
+app.use(morgan('dev'));
+app.use(express.json());
+
+app.use('/health', healthRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/accounts-payable', accountsPayableRouter);
+app.use('/api/v1/payments', accountPayablePaymentRouter);
+app.use('/api/v1/allergies', allergiesRouter);
+app.use('/api/v1/appointments', appointmentsRouter);
+app.use('/api/v1/dashboard', dashboardRouter);
+app.use('/api/v1/dental-histories', dentalHistoriesRouter);
+app.use('/api/v1/exam-categories', examCategoriesRouter);
+app.use('/api/v1/exam-types', examTypesRouter);
+app.use('/api/v1/exams', examsRouter);
+app.use('/api/v1/odontograms', odontogramsRouter);
+app.use('/api/v1/medication-categories', medicationCategoriesRouter);
+app.use('/api/v1/medications', medicationsRouter);
+app.use('/api/v1/patients', patientsRouter);
+app.use('/api/v1/patient-history', patientHistoryRouter);
+app.use('/api/v1/permissions', permissionsRouter);
+app.use('/api/v1/prescriptions', prescriptionsRouter);
+app.use('/api/v1/roles', rolesRouter);
+app.use('/api/v1/reports', reportsRouter);
+app.use('/api/v1/specialties', specialtiesRouter);
+app.use('/api/v1/surveys', surveysRouter);
+app.use('/api/v1/patient-surveys', patientSurveysRouter);
+app.use('/api/v1/users', usersRouter);
+app.use('/api/backup', backupRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export default app;

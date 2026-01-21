@@ -1,0 +1,772 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AreaType {
+  MEDICINA_GENERAL
+  ODONTOLOGIA
+  ADMINISTRATIVO
+}
+
+model Role {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(60)
+  description String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@index([name], name: "idx_roles_name")
+  @@map("roles")
+}
+
+model Permission {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(60)
+  description String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+
+  @@index([name], name: "idx_permissions_name")
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Specialty {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(100)
+  description String?   @db.VarChar(255)
+  area        AreaType  @default(MEDICINA_GENERAL)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@index([name], name: "idx_specialties_name")
+  @@index([area], name: "idx_specialties_area")
+  @@map("specialties")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  roleId       String    @map("role_id") @db.Uuid
+  specialtyId  String    @map("specialty_id") @db.Uuid
+  username     String    @unique @db.VarChar(60)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(255)
+  phone        String?   @db.VarChar(20)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  role      Role      @relation(fields: [roleId], references: [id])
+  specialty Specialty @relation(fields: [specialtyId], references: [id])
+
+  activityLogs        ActivityLog[]
+  patientSurveys      PatientSurvey[]
+  exams               Exam[]
+  appointments        Appointment[]    @relation("UserAppointments")
+  createdAppointments Appointment[]    @relation("AppointmentCreator")
+  vitalSigns          VitalSigns[]
+  medicalHistories    MedicalHistory[]
+  prescriptions       Prescription[]
+  dentalHistories     DentalHistory[]
+
+  @@index([username], name: "idx_users_username")
+  @@index([fullName], name: "idx_users_full_name")
+  @@map("users")
+}
+
+enum DocumentType {
+  DUI
+  NIT
+  PASSPORT
+  NONE
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum ConsentMechanism {
+  FIRMA_FISICA
+  ACEPTACION_DIGITAL
+  APODERADO_LEGAL
+}
+
+model Patient {
+  id                  String           @id @default(uuid()) @db.Uuid
+  firstName           String           @map("first_name") @db.Text
+  lastName            String           @map("last_name") @db.Text
+  documentType        DocumentType     @default(DUI) @map("document_type")
+  documentNumber      String           @map("document_number") @db.Text
+  dateOfBirth         DateTime         @map("date_of_birth")
+  isMinor             Boolean          @default(false) @map("is_minor")
+  guardianName        String?          @map("guardian_name") @db.VarChar(255)
+  gender              Gender           @default(M)
+  email               String?          @db.Text
+  phone               String?          @db.Text
+  address             String?          @db.Text
+  consentMechanism    ConsentMechanism @map("consent_mechanism")
+  consentAcceptedAt   DateTime         @map("consent_accepted_at")
+  medicalRecordNumber String           @map("medical_record_number") @db.VarChar(50)
+  firstNameHash       String?          @map("first_name_hash") @db.VarChar(64)
+  lastNameHash        String?          @map("last_name_hash") @db.VarChar(64)
+  documentNumberHash  String?          @unique @map("document_number_hash") @db.VarChar(64)
+  emailHash           String?          @unique @map("email_hash") @db.VarChar(64)
+  phoneHash           String?          @unique @map("phone_hash") @db.VarChar(64)
+  isActive            Boolean          @default(true) @map("is_active")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  deletedAt           DateTime?        @map("deleted_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  patientAllergies   PatientAllergy[]
+  patientSurveys     PatientSurvey[]
+  accountReceivables AccountReceivable[]
+  accountsPayable    AccountsPayable[]
+  exams              Exam[]
+  appointments       Appointment[]
+  vitalSigns         VitalSigns[]
+  medicalHistories   MedicalHistory[]
+  prescriptions      Prescription[]
+  dentalHistories    DentalHistory[]
+
+  @@index([firstNameHash], name: "idx_patients_first_name_hash")
+  @@index([lastNameHash], name: "idx_patients_last_name_hash")
+  @@index([documentNumberHash], name: "idx_patients_document_number_hash")
+  @@index([emailHash], name: "idx_patients_email_hash")
+  @@map("patients")
+}
+
+model Allergy {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  patientAllergies PatientAllergy[]
+
+  @@index([name], name: "idx_allergies_name")
+  @@map("allergies")
+}
+
+model PatientAllergy {
+  id            String    @id @default(uuid()) @db.Uuid
+  patientId     String    @map("patient_id") @db.Uuid
+  allergyTypeId String    @map("allergy_type_id") @db.Uuid
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  allergy Allergy @relation(fields: [allergyTypeId], references: [id])
+
+  @@index([patientId], name: "idx_patient_allergies_patient_id")
+  @@index([allergyTypeId], name: "idx_patient_allergies_allergy_type_id")
+  @@map("patient_allergies")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  action    String   @db.VarChar(255)
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId], name: "idx_activity_logs_user_id")
+  @@map("activity_logs")
+}
+
+model Survey {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  questions      Question[]
+  patientSurveys PatientSurvey[]
+
+  @@index([name], name: "idx_surveys_name")
+  @@map("surveys")
+}
+
+model Question {
+  id             String    @id @default(uuid()) @db.Uuid
+  surveyId       String    @map("survey_id") @db.Uuid
+  order          String    @db.VarChar(50)
+  text           String
+  requireComment Boolean   @default(false) @map("require_comment")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  survey Survey @relation(fields: [surveyId], references: [id])
+
+  answers Answer[]
+
+  @@index([surveyId], name: "idx_questions_survey_id")
+  @@map("questions")
+}
+
+model PatientSurvey {
+  id          String    @id @default(uuid()) @db.Uuid
+  patientId   String    @map("patient_id") @db.Uuid
+  surveyId    String    @map("survey_id") @db.Uuid
+  completedBy String    @map("completed_by") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  survey  Survey  @relation(fields: [surveyId], references: [id])
+  user    User    @relation(fields: [completedBy], references: [id])
+
+  answers Answer[]
+
+  @@index([patientId], name: "idx_patient_surveys_patient_id")
+  @@index([surveyId], name: "idx_patient_surveys_survey_id")
+  @@index([completedBy], name: "idx_patient_surveys_completed_by")
+  @@map("patient_surveys")
+}
+
+model Answer {
+  id              String    @id @default(uuid()) @db.Uuid
+  patientSurveyId String    @map("patient_survey_id") @db.Uuid
+  questionId      String    @map("question_id") @db.Uuid
+  answer          Boolean
+  comment         String?
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  deletedAt       DateTime? @map("deleted_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  patientSurvey PatientSurvey @relation(fields: [patientSurveyId], references: [id])
+  question      Question      @relation(fields: [questionId], references: [id])
+
+  @@unique([patientSurveyId, questionId], name: "uniq_answer_patient_survey_question")
+  @@index([patientSurveyId], name: "idx_answers_patient_survey_id")
+  @@index([questionId], name: "idx_answers_question_id")
+  @@map("answers")
+}
+
+model MedicationCategory {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  description String?
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  deletedAt   DateTime?    @map("deleted_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  medications Medication[]
+
+  @@index([name], name: "idx_medication_categories_name")
+  @@map("medication_categories")
+}
+
+enum MeasureUnit {
+  TABLET
+  CAPSULE
+  ML
+  MG
+  G
+  LITER
+}
+
+model Medication {
+  id             String      @id @default(uuid()) @db.Uuid
+  categoryId     String      @map("category_id") @db.Uuid
+  name           String      @unique
+  description    String?
+  code           String      @unique
+  stock          Int         @default(0)
+  minStock       Int         @default(0) @map("min_stock")
+  price          Float       @default(0.0)
+  costPrice      Float       @default(0.0) @map("cost_price")
+  measureUnit    MeasureUnit @default(MG) @map("measure_unit")
+  expirationDate DateTime?   @map("expiration_date")
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  deletedAt      DateTime?   @map("deleted_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  category          MedicationCategory @relation(fields: [categoryId], references: [id])
+  prescriptionItems PrescriptionItem[]
+
+  @@index([categoryId], name: "idx_medications_category_id")
+  @@index([name], name: "idx_medications_name")
+  @@map("medications")
+}
+
+enum AccountStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
+enum PlanType {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+}
+
+enum CuotaStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+model AccountReceivable {
+  id             String        @id @default(uuid()) @db.Uuid
+  patientId      String        @map("patient_id") @db.Uuid
+  totalAmount    Float         @map("total_amount")
+  numberOfCuotas Int           @map("number_of_cuotas")
+  planType       PlanType      @default(MONTHLY) @map("plan_type")
+  status         AccountStatus @default(ACTIVE)
+  reason         String?
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  Payment Payment[]
+
+  @@index([patientId], name: "idx_account_receivables_patient_id")
+  @@map("account_receivables")
+}
+
+model Payment {
+  id                  String        @id @default(uuid()) @db.Uuid
+  accountReceivableId String        @map("account_receivable_id") @db.Uuid
+  amount              Float
+  paymentDate         DateTime      @default(now()) @map("payment_date")
+  method              PaymentMethod @default(CASH)
+  cuotaNumber         Int           @map("cuota_number")
+  cuotaStatus         CuotaStatus   @default(PAID) @map("cuota_status")
+  isActive            Boolean       @default(true) @map("is_active")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  deletedAt           DateTime?     @map("deleted_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  accountReceivable AccountReceivable @relation(fields: [accountReceivableId], references: [id])
+
+  @@index([accountReceivableId], name: "idx_payments_account_receivable_id")
+  @@map("payments")
+}
+
+enum AccountPayableStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model AccountsPayable {
+  id                   String               @id @default(uuid()) @db.Uuid
+  patientId            String               @map("patient_id") @db.Uuid
+  description          String
+  totalAmount          Float                @map("total_amount")
+  paidAmount           Float                @default(0.0) @map("paid_amount")
+  remainingAmount      Float                @map("remaining_amount")
+  numberOfInstallments Int                  @map("number_of_installments")
+  paidInstallments     Float                @default(0.0) @map("paid_installments")
+  status               AccountPayableStatus @default(PENDING)
+  isActive             Boolean              @default(true) @map("is_active")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  deletedAt            DateTime?            @map("deleted_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  patient  Patient                 @relation(fields: [patientId], references: [id])
+  payments AccountPayablePayment[]
+
+  @@index([patientId], name: "idx_accounts_payable_patient_id")
+  @@index([status], name: "idx_accounts_payable_status")
+  @@map("accounts_payable")
+}
+
+model AccountPayablePayment {
+  id                String    @id @default(uuid()) @db.Uuid
+  accountsPayableId String    @map("accounts_payable_id") @db.Uuid
+  amount            Float
+  installmentNumber Int?      @map("installment_number")
+  isPartial         Boolean   @default(false) @map("is_partial")
+  paymentDate       DateTime  @default(now()) @map("payment_date")
+  notes             String?
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  deletedAt         DateTime? @map("deleted_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  accountsPayable AccountsPayable @relation(fields: [accountsPayableId], references: [id])
+
+  @@index([accountsPayableId], name: "idx_account_payable_payments_account_id")
+  @@map("account_payable_payments")
+}
+
+model ExamCategory {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  examTypes   ExamType[]
+
+  @@index([name], name: "idx_exam_categories_name")
+  @@map("exam_categories")
+}
+
+enum TimeUnit {
+  MINUTES
+  HOURS
+  DAYS
+}
+
+model ExamType {
+  id               String    @id @default(uuid()) @db.Uuid
+  examCategoryId   String    @map("exam_category_id") @db.Uuid
+  name             String    @unique
+  description      String?
+  price            Float     @default(0.0)
+  duration         Int       @default(30)
+  durationTimeUnit TimeUnit  @default(MINUTES) @map("duration_time_unit")
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  category ExamCategory @relation(fields: [examCategoryId], references: [id])
+  exams    Exam[]
+
+  @@index([examCategoryId], name: "idx_exam_types_exam_category_id")
+  @@index([name], name: "idx_exam_types_name")
+  @@map("exam_types")
+}
+
+enum ExamStatus {
+  PENDING
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+model Exam {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  patientId   String     @map("patient_id") @db.Uuid
+  examTypeId  String     @map("exam_type_id") @db.Uuid
+  scheduledAt DateTime   @map("scheduled_at")
+  status      ExamStatus @default(PENDING)
+  notes       String?
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id])
+  patient  Patient  @relation(fields: [patientId], references: [id])
+  examType ExamType @relation(fields: [examTypeId], references: [id])
+
+  @@index([userId], name: "idx_exams_user_id")
+  @@index([patientId], name: "idx_exams_patient_id")
+  @@index([examTypeId], name: "idx_exams_exam_type_id")
+  @@index([status], name: "idx_exams_status")
+  @@map("exams")
+}
+
+enum AppointmentStatusName {
+  SCHEDULED
+  IN_VITALS
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+enum AppointmentType {
+  FIRST_TIME
+  FOLLOW_UP
+  EMERGENCY
+  ROUTINE
+}
+
+model Appointment {
+  id                    String                @id @default(uuid()) @db.Uuid
+  patientId             String                @map("patient_id") @db.Uuid
+  userId                String                @map("user_id") @db.Uuid // Profesional de salud
+  date                  DateTime              @db.Date
+  startTime             DateTime              @map("start_time") @db.Time
+  endTime               DateTime              @map("end_time") @db.Time
+  duration              Int
+  type                  AppointmentType       @default(ROUTINE)
+  status                AppointmentStatusName @default(SCHEDULED)
+  notes                 String?
+  vitalsTakenAt         DateTime?             @map("vitals_taken_at")
+  consultationStartedAt DateTime?             @map("consultation_started_at")
+  consultationEndedAt   DateTime?             @map("consultation_ended_at")
+  createdBy             String                @map("created_by") @db.Uuid // Usuario que creó la cita
+  isActive              Boolean               @default(true) @map("is_active")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  deletedAt             DateTime?             @map("deleted_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  patient         Patient         @relation(fields: [patientId], references: [id])
+  user            User            @relation("UserAppointments", fields: [userId], references: [id])
+  creator         User            @relation("AppointmentCreator", fields: [createdBy], references: [id])
+  vitalSigns      VitalSigns?
+  medicalHistory  MedicalHistory?
+  dentalHistories DentalHistory[]
+  prescriptions   Prescription[]
+
+  @@index([patientId], name: "idx_appointments_patient_id")
+  @@index([userId], name: "idx_appointments_user_id")
+  @@index([createdBy], name: "idx_appointments_created_by")
+  @@map("appointments")
+}
+
+model VitalSigns {
+  id                String   @id @default(uuid()) @db.Uuid
+  appointmentId     String   @unique @map("appointment_id") @db.Uuid
+  patientId         String   @map("patient_id") @db.Uuid
+  recordedById      String   @map("recorded_by_id") @db.Uuid
+  // Datos vitales
+  weight            Float? // kg
+  height            Float? // cm
+  temperature       Float? // °C
+  systolicPressure  Int?     @map("systolic_pressure") // mmHg 
+  diastolicPressure Int?     @map("diastolic_pressure") // mmHg
+  heartRate         Int?     @map("heart_rate") // bpm
+  respiratoryRate   Int?     @map("respiratory_rate") // rpm
+  oxygenSaturation  Float?   @map("oxygen_saturation") // %
+  notes             String?
+  recordedAt        DateTime @default(now()) @map("recorded_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  recordedBy  User        @relation(fields: [recordedById], references: [id])
+
+  @@index([appointmentId], name: "idx_vital_signs_appointment_id")
+  @@index([patientId], name: "idx_vital_signs_patient_id")
+  @@index([recordedById], name: "idx_vital_signs_recorded_by_id")
+  @@map("vital_signs")
+}
+
+model MedicalHistory {
+  id             String    @id @default(uuid()) @db.Uuid
+  appointmentId  String    @unique @map("appointment_id") @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  doctorId       String    @map("doctor_id") @db.Uuid
+  // Datos médicos
+  chiefComplaint String?   @map("chief_complaint") // Motivo principal de consulta
+  presentIllness String?   @map("present_illness") // Historia de enfermedad actual
+  physicalExam   String?   @map("physical_exam") // Examen físico
+  diagnosis      String?   @map("diagnosis") // Diagnóstico
+  treatment      String?   @map("treatment") // Tratamiento
+  labOrders      String?   @map("lab_orders") // Órdenes de laboratorio
+  followUpNotes  String?   @map("follow_up_notes") // Notas de seguimiento
+  nextVisitDate  DateTime? @map("next_visit_date")
+  isActive       Boolean   @default(true) @map("is_active")
+  visitDate      DateTime  @default(now()) @map("visit_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  appointment   Appointment    @relation(fields: [appointmentId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  doctor        User           @relation(fields: [doctorId], references: [id])
+  prescriptions Prescription[]
+
+  @@index([patientId, visitDate])
+  @@index([doctorId, visitDate])
+}
+
+enum OralHygieneLevel {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum GumCondition {
+  HEALTHY
+  GINGIVITIS
+  PERIODONTITIS
+  BLEEDING
+  INFLAMMATION
+}
+
+model DentalHistory {
+  id               String           @id @default(uuid()) @db.Uuid
+  patientId        String           @map("patient_id") @db.Uuid
+  doctorId         String           @map("doctor_id") @db.Uuid
+  appointmentId    String           @map("appointment_id") @db.Uuid
+  chiefComplaint   String?          @map("chief_complaint")
+  diagnosis        String?          @map("diagnosis")
+  oralHygieneLevel OralHygieneLevel @default(FAIR) @map("oral_hygiene_level")
+  gumCondition     GumCondition     @default(HEALTHY) @map("gum_condition")
+  hasCalculus      Boolean          @default(false) @map("has_calculus")
+  hasPlaque        Boolean          @default(false) @map("has_plaque")
+  hasHalitosis     Boolean          @default(false) @map("has_halitosis")
+  treatmentPlan    String?          @map("treatment_plan")
+  nextVisitDate    DateTime?        @map("next_visit_date")
+  recommendations  String?          @map("recommendations")
+  isActive         Boolean          @default(true) @map("is_active")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  doctor      User        @relation(fields: [doctorId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  odontogram  Odontogram?
+
+  @@index([patientId], name: "idx_dental_histories_patient_id")
+  @@index([doctorId], name: "idx_dental_histories_doctor_id")
+  @@index([appointmentId], name: "idx_dental_histories_appointment_id")
+  @@map("dental_histories")
+}
+
+enum ToothCondition {
+  HEALTHY
+  CARIES
+  FILLED
+  FRACTURED
+  MISSING
+  CROWN
+  BRIDGE
+  IMPLANT
+  ROOT_CANAL
+  EXTRACTION_NEEDED
+  WISDOM_TOOTH
+}
+
+model Odontogram {
+  id              String   @id @default(uuid()) @db.Uuid
+  dentalHistoryId String   @unique @map("dental_history_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  dental_history DentalHistory @relation(fields: [dentalHistoryId], references: [id])
+
+  teeth Tooth[]
+
+  @@index([dentalHistoryId])
+  @@map("odontograms")
+}
+
+model Tooth {
+  id               String         @id @default(uuid()) @db.Uuid
+  odontogramId     String         @db.Uuid
+  toothNumber      Int            @map("tooth_number") // Numeración universal (1-32) o FDI (11-48)
+  position         String // Ej: "11" (FDI), "1" (Universal)
+  quadrant         Int? // 1=Superior Derecho, 2=Superior Izquierdo, 3=Inferior Izquierdo, 4=Inferior Derecho
+  affectedSurfaces String?        @map("affected_surfaces") // Superficies afectadas separadas por coma: "OCCLUSAL,MESIAL"
+  condition        ToothCondition @default(HEALTHY)
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  odontogram Odontogram @relation(fields: [odontogramId], references: [id], onDelete: Cascade)
+
+  @@unique([odontogramId, toothNumber])
+  @@index([odontogramId], name: "idx_teeth_odontogram_id")
+  @@map("teeth")
+}
+
+model Prescription {
+  id                  String    @id @default(uuid()) @db.Uuid
+  medicalHistoryId    String?   @map("medical_history_id") @db.Uuid
+  appointmentId       String?   @map("appointment_id") @db.Uuid
+  patientId           String    @map("patient_id") @db.Uuid
+  doctorId            String    @map("doctor_id") @db.Uuid
+  prescriptionNumber  String    @unique @map("prescription_number") // Ejm: RX-2024-0001
+  // Indicaciones generales
+  generalInstructions String?   @map("general_instructions")
+  dietRecommendations String?   @map("diet_recommendations")
+  restrictions        String?
+  validUntil          DateTime? @map("valid_until")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  medicalHistory    MedicalHistory?    @relation(fields: [medicalHistoryId], references: [id])
+  appointment       Appointment?       @relation(fields: [appointmentId], references: [id])
+  patient           Patient            @relation(fields: [patientId], references: [id])
+  doctor            User               @relation(fields: [doctorId], references: [id])
+  prescriptionItems PrescriptionItem[]
+
+  @@index([medicalHistoryId], name: "idx_prescriptions_medical_history_id")
+  @@index([appointmentId], name: "idx_prescriptions_appointment_id")
+  @@index([patientId], name: "idx_prescriptions_patient_id")
+  @@index([doctorId], name: "idx_prescriptions_doctor_id")
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  prescriptionId String   @map("prescription_id") @db.Uuid
+  medicationId   String   @map("medication_id") @db.Uuid
+  quantity       Int
+  dosage         String
+  frequency      String
+  duration       String
+  administration String
+  instructions   String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medication   Medication   @relation(fields: [medicationId], references: [id])
+
+  @@index([prescriptionId], name: "idx_prescription_items_prescription_id")
+  @@index([medicationId], name: "idx_prescription_items_medication_id")
+  @@map("prescription_items")
+}
